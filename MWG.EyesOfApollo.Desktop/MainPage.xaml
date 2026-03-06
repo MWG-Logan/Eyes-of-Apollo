@@ -1,7 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="MWG.EyesOfApollo.Desktop.MainPage">
+xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:MWG.EyesOfApollo.Desktop.ViewModels"
+             xmlns:models="clr-namespace:MWG.EyesOfApollo.Desktop.Models"
+x:Class="MWG.EyesOfApollo.Desktop.MainPage"
+x:DataType="vm:MainViewModel">
 
     <Grid RowDefinitions="Auto,*" ColumnDefinitions="*,320" BackgroundColor="{Binding ThemeBackground}">
         <Grid Grid.Row="0" Grid.ColumnSpan="2" Padding="16" ColumnDefinitions="*,Auto">
@@ -25,10 +28,10 @@
                 <Picker ItemsSource="{Binding SourceOptions}" SelectedItem="{Binding SelectedSourceType}" />
 
                 <Label Text="Device" FontAttributes="Bold" TextColor="{Binding ThemePrimary}" />
-                <Picker ItemsSource="{Binding Devices}" ItemDisplayBinding="{Binding DisplayName}" SelectedItem="{Binding SelectedDevice}" />
+                <Picker ItemsSource="{Binding Devices}" ItemDisplayBinding="{Binding DisplayName, x:DataType=models:AudioDeviceInfo}" SelectedItem="{Binding SelectedDevice}" />
 
                 <Label Text="Theme" FontAttributes="Bold" TextColor="{Binding ThemePrimary}" />
-                <Picker ItemsSource="{Binding Themes}" ItemDisplayBinding="{Binding Name}" SelectedItem="{Binding SelectedTheme}" />
+                <Picker ItemsSource="{Binding Themes}" ItemDisplayBinding="{Binding Name, x:DataType=models:ThemeDefinition}" SelectedItem="{Binding SelectedTheme}" />
 
                 <Label Text="Mode" FontAttributes="Bold" TextColor="{Binding ThemePrimary}" />
                 <Picker ItemsSource="{Binding ModeOptions}" SelectedItem="{Binding SelectedMode}" />
