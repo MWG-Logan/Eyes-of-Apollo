@@ -45,6 +45,18 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Sign portable EXE/DLLs with Artifact Signing
+        uses: azure/artifact-signing-action@v1
+        with:
+          endpoint: ${{ secrets.ARTIFACT_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ secrets.ARTIFACT_SIGNING_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.ARTIFACT_SIGNING_CERT_PROFILE }}
+          files-folder: MWG.EyesOfApollo.Desktop/bin/Release/net10.0-windows10.0.19041.0/win-x64/publish
+          files-folder-filter: exe,dll
+          files-folder-recurse: false
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
       - name: Sign MSIX with Artifact Signing
         uses: azure/artifact-signing-action@v1
         with:
@@ -82,7 +94,7 @@ jobs:
           distribution: temurin
           java-version: '17'
       - name: Install MAUI workloads
-        run: dotnet workload install maui-android
+        run: dotnet workload install maui
       - name: Decode keystore
         shell: pwsh
         run: |
@@ -130,7 +142,7 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
       - name: Install MAUI workloads
-        run: dotnet workload install maui-ios maui-maccatalyst
+        run: dotnet workload install maui
       - name: Install Apple signing assets
         shell: bash
         run: |
