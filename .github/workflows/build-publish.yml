@@ -30,6 +30,7 @@ jobs:
           -f net10.0-windows10.0.19041.0
           -p:RuntimeIdentifierOverride=win-x64
           -p:WindowsPackageType=None
+          -p:SelfContained=true
           -p:WindowsAppSDKSelfContained=true
       - name: Publish Windows MSIX
         run: >-
@@ -39,6 +40,8 @@ jobs:
           -p:RuntimeIdentifierOverride=win-x64
           -p:WindowsPackageType=MSIX
           -p:GenerateAppxPackageOnBuild=true
+          -p:SelfContained=true
+          -p:WindowsAppSDKSelfContained=true
       - name: Azure login
         uses: azure/login@v2
         with:
@@ -64,7 +67,7 @@ jobs:
           signing-account-name: ${{ secrets.ARTIFACT_SIGNING_ACCOUNT_NAME }}
           certificate-profile-name: ${{ secrets.ARTIFACT_SIGNING_CERT_PROFILE }}
           files-folder: MWG.EyesOfApollo.Desktop/bin/Release/net10.0-windows10.0.19041.0/win-x64/AppPackages
-          files-folder-filter: msix
+          files-folder-filter: MWG.EyesOfApollo.*.msix
           files-folder-recurse: true
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
