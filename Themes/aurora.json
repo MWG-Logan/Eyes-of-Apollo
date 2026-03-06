@@ -1,0 +1,10 @@
+{
+  "name": "Aurora",
+  "background": "#0B0D17",
+  "primary": "#6C63FF",
+  "secondary": "#F5A623",
+  "mode": "Bars",
+  "barCount": 96,
+  "lineThickness": 2.0,
+  "barSpacing": 2.0
+}

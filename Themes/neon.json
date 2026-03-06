@@ -1,0 +1,10 @@
+{
+  "name": "Neon Pulse",
+  "background": "#05060A",
+  "primary": "#00F5FF",
+  "secondary": "#FF2E88",
+  "mode": "Line",
+  "barCount": 96,
+  "lineThickness": 2.5,
+  "barSpacing": 2.0
+}

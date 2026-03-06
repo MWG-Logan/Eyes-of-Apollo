@@ -2,14 +2,15 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Threading;
-using Microsoft.Maui.Graphics;
 using MWG.EyesOfApollo.Desktop.Models;
 using MWG.EyesOfApollo.Desktop.Rendering;
 using MWG.EyesOfApollo.Desktop.Services;
 
 namespace MWG.EyesOfApollo.Desktop.ViewModels
 {
+    /// <summary>
+    /// View model that orchestrates audio capture, visualization state, and settings.
+    /// </summary>
     public class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         private const double DefaultDbMin = -90;
@@ -57,6 +58,11 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
         private float[] _bandPeakMagnitudes = Array.Empty<float>();
         private float _autoGainPeak = 0.1f;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MainViewModel"/> class.
+        /// </summary>
+        /// <param name="audioCaptureService">The audio capture service.</param>
+        /// <param name="themeService">The theme service.</param>
         public MainViewModel(IAudioCaptureService audioCaptureService, ThemeService themeService)
         {
             _audioCaptureService = audioCaptureService;
@@ -87,19 +93,50 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
             _audioCaptureService.AudioBufferAvailable += OnAudioBufferAvailable;
         }
 
+        /// <inheritdoc />
         public event PropertyChangedEventHandler? PropertyChanged;
 
+        /// <summary>
+        /// Gets the available audio devices.
+        /// </summary>
         public ObservableCollection<AudioDeviceInfo> Devices { get; } = new();
+        /// <summary>
+        /// Gets the available themes.
+        /// </summary>
         public ObservableCollection<ThemeDefinition> Themes { get; } = new();
+        /// <summary>
+        /// Gets the available audio source options.
+        /// </summary>
         public ObservableCollection<AudioSourceType> SourceOptions { get; }
+        /// <summary>
+        /// Gets the available visualizer modes.
+        /// </summary>
         public ObservableCollection<VisualizerMode> ModeOptions { get; }
+        /// <summary>
+        /// Gets the available frame rate options.
+        /// </summary>
         public ObservableCollection<int> FrameRateOptions { get; }
+        /// <summary>
+        /// Gets the available amplitude scale modes.
+        /// </summary>
         public ObservableCollection<AmplitudeScaleMode> ScaleOptions { get; }
+        /// <summary>
+        /// Gets the available weighting options.
+        /// </summary>
         public ObservableCollection<FrequencyWeightingMode> WeightingOptions { get; }
+        /// <summary>
+        /// Gets the available bin modes.
+        /// </summary>
         public ObservableCollection<FrequencyBinMode> BinModeOptions { get; }
 
+        /// <summary>
+        /// Gets the drawable used by the view.
+        /// </summary>
         public VisualizerDrawable VisualizerDrawable { get; }
 
+        /// <summary>
+        /// Gets or sets the selected audio device.
+        /// </summary>
         public AudioDeviceInfo? SelectedDevice
         {
             get => _selectedDevice;
@@ -113,6 +150,9 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
             }
         }
 
+        /// <summary>
+        /// Gets or sets the selected bin mode.
+        /// </summary>
         public FrequencyBinMode SelectedBinMode
         {
             get => _selectedBinMode;
@@ -126,6 +166,9 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
             }
         }
 
+        /// <summary>
+        /// Gets or sets a value indicating whether band normalization is enabled.
+        /// </summary>
         public bool EnableBandNormalization
         {
             get => _enableBandNormalization;
@@ -138,6 +181,9 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
             }
         }
 
+        /// <summary>
+        /// Gets or sets the selected weighting mode.
+        /// </summary>
         public FrequencyWeightingMode SelectedWeightingMode
         {
             get => _selectedWeightingMode;
@@ -150,6 +196,9 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
             }
         }
 
+        /// <summary>
+        /// Gets or sets the selected theme.
+        /// </summary>
         public ThemeDefinition? SelectedTheme
         {
             get => _selectedTheme;
@@ -163,6 +212,9 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
             }
         }
 
+        /// <summary>
+        /// Gets or sets the selected audio source type.
+        /// </summary>
         public AudioSourceType SelectedSourceType
         {
             get => _selectedSourceType;
@@ -176,6 +228,9 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
             }
         }
 
+        /// <summary>
+        /// Gets or sets the selected visualizer mode.
+        /// </summary>
         public VisualizerMode SelectedMode
         {
             get => _selectedMode;
@@ -189,6 +244,9 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
             }
         }
 
+        /// <summary>
+        /// Gets or sets the selected frame rate.
+        /// </summary>
         public int SelectedFrameRate
         {
             get => _selectedFrameRate;
@@ -201,6 +259,9 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
             }
         }
 
+        /// <summary>
+        /// Gets or sets a value indicating whether stats are shown.
+        /// </summary>
         public bool ShowStats
         {
             get => _showStats;
@@ -217,6 +278,9 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
             }
         }
 
+        /// <summary>
+        /// Gets or sets a value indicating whether axis indicators are shown.
+        /// </summary>
         public bool ShowAxisIndicators
         {
             get => _showAxisIndicators;
@@ -230,6 +294,9 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
             }
         }
 
+        /// <summary>
+        /// Gets or sets the selected amplitude scale mode.
+        /// </summary>
         public AmplitudeScaleMode SelectedScaleMode
         {
             get => _selectedScaleMode;
@@ -243,6 +310,9 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
             }
         }
 
+        /// <summary>
+        /// Gets or sets a value indicating whether auto gain is enabled.
+        /// </summary>
         public bool EnableAutoGain
         {
             get => _enableAutoGain;
@@ -255,6 +325,9 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
             }
         }
 
+        /// <summary>
+        /// Gets or sets a value indicating whether smoothing is enabled.
+        /// </summary>
         public bool EnableSmoothing
         {
             get => _enableSmoothing;
@@ -267,6 +340,9 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
             }
         }
 
+        /// <summary>
+        /// Gets or sets a value indicating whether peak hold is enabled.
+        /// </summary>
         public bool EnablePeakHold
         {
             get => _enablePeakHold;
@@ -280,16 +356,28 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
             }
         }
 
+        /// <summary>
+        /// Gets or sets the stats text.
+        /// </summary>
         public string StatsText
         {
             get => _statsText;
             set => SetProperty(ref _statsText, value);
         }
 
+        /// <summary>
+        /// Gets the background color from the selected theme.
+        /// </summary>
         public Color ThemeBackground => SelectedTheme?.BackgroundColor ?? Colors.Black;
 
+        /// <summary>
+        /// Gets the primary color from the selected theme.
+        /// </summary>
         public Color ThemePrimary => SelectedTheme?.PrimaryColor ?? Colors.White;
 
+        /// <summary>
+        /// Initializes themes, preferences, and devices.
+        /// </summary>
         public async Task InitializeAsync()
         {
             if (_isInitialized)
@@ -304,6 +392,9 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
             await LoadDevicesAsync();
         }
 
+        /// <summary>
+        /// Updates frame stats and latency text.
+        /// </summary>
         public void TickFrame()
         {
             _frameCount++;
@@ -322,6 +413,7 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
             }
         }
 
+        /// <inheritdoc />
         public void Dispose()
         {
             _audioCaptureService.AudioBufferAvailable -= OnAudioBufferAvailable;
@@ -343,24 +435,33 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
         private async Task LoadDevicesAsync()
         {
             Devices.Clear();
-            var devices = SelectedSourceType == AudioSourceType.Input
-                ? await _audioCaptureService.GetInputDevicesAsync()
-                : await _audioCaptureService.GetOutputDevicesAsync();
-
-            foreach (var device in devices)
+            try
             {
-                Devices.Add(device);
+                var devices = SelectedSourceType == AudioSourceType.Input
+                    ? await _audioCaptureService.GetInputDevicesAsync()
+                    : await _audioCaptureService.GetOutputDevicesAsync();
+
+                foreach (var device in devices)
+                {
+                    Devices.Add(device);
+                }
+
+                if (Devices.Count == 0)
+                {
+                    SelectedDevice = null;
+                    await _audioCaptureService.StopAsync();
+                    return;
+                }
+
+                var persistedDeviceId = Preferences.Get(DevicePreferenceKey, string.Empty);
+                SelectedDevice = Devices.FirstOrDefault(device => device.Id == persistedDeviceId) ?? Devices.FirstOrDefault();
             }
-
-            if (Devices.Count == 0)
+            catch (Exception ex)
             {
+                DiagnosticsLogger.LogError("Failed to enumerate audio devices.", ex);
                 SelectedDevice = null;
                 await _audioCaptureService.StopAsync();
-                return;
             }
-
-            var persistedDeviceId = Preferences.Get(DevicePreferenceKey, string.Empty);
-            SelectedDevice = Devices.FirstOrDefault(device => device.Id == persistedDeviceId) ?? Devices.FirstOrDefault();
         }
 
         private async Task RestartCaptureAsync()

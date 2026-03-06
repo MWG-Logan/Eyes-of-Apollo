@@ -2,6 +2,9 @@ using MWG.EyesOfApollo.Desktop.Models;
 
 namespace MWG.EyesOfApollo.Desktop.Rendering
 {
+    /// <summary>
+    /// Draws the visualizer using the current <see cref="VisualizerState"/>.
+    /// </summary>
     public class VisualizerDrawable : IDrawable
     {
         private readonly VisualizerState _state;
@@ -11,20 +14,49 @@ namespace MWG.EyesOfApollo.Desktop.Rendering
         private const float AxisRightPadding = 12f;
         private const float AmplitudeHeadroom = 0.9f;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="VisualizerDrawable"/> class.
+        /// </summary>
+        /// <param name="state">The shared visualizer state.</param>
         public VisualizerDrawable(VisualizerState state)
         {
             _state = state;
         }
 
+        /// <summary>
+        /// Gets or sets the current theme.
+        /// </summary>
         public ThemeDefinition Theme { get; set; } = new();
+        /// <summary>
+        /// Gets or sets the visualizer mode.
+        /// </summary>
         public VisualizerMode Mode { get; set; } = VisualizerMode.Bars;
+        /// <summary>
+        /// Gets or sets a value indicating whether axis labels are shown.
+        /// </summary>
         public bool ShowAxisIndicators { get; set; }
+        /// <summary>
+        /// Gets or sets the amplitude scale mode.
+        /// </summary>
         public AmplitudeScaleMode ScaleMode { get; set; } = AmplitudeScaleMode.Normalized;
+        /// <summary>
+        /// Gets or sets a value indicating whether peak hold is shown.
+        /// </summary>
         public bool ShowPeakHold { get; set; }
+        /// <summary>
+        /// Gets or sets the minimum dB used for normalization.
+        /// </summary>
         public float DbMin { get; set; } = -90f;
+        /// <summary>
+        /// Gets or sets the maximum dB used for normalization.
+        /// </summary>
         public float DbMax { get; set; } = -6f;
+        /// <summary>
+        /// Gets or sets the frequency binning mode.
+        /// </summary>
         public FrequencyBinMode BinMode { get; set; } = FrequencyBinMode.Logarithmic;
 
+        /// <inheritdoc />
         public void Draw(ICanvas canvas, RectF dirtyRect)
         {
             canvas.FillColor = Theme.BackgroundColor;

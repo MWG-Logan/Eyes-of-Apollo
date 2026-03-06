@@ -1,6 +1,6 @@
 ﻿using Foundation;
 
-namespace MWG.EyesOfApollo.Desktop
+namespace MWG.EyesOfApollo.Desktop.Platforms.MacCatalyst
 {
     [Register("AppDelegate")]
     public class AppDelegate : MauiUIApplicationDelegate

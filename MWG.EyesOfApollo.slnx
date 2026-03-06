@@ -1,3 +1,6 @@
 <Solution>
-  <Project Path="MWG.EyesOfApollo.Desktop/MWG.EyesOfApollo.Desktop.csproj" />
+  <Project Path="MWG.EyesOfApollo.Desktop/MWG.EyesOfApollo.Desktop.csproj">
+    <Deploy Solution="Debug|*" />
+  </Project>
+  <Project Path="MWG.EyesOfApollo.Tests/MWG.EyesOfApollo.Tests.csproj" />
 </Solution>

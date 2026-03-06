@@ -6,6 +6,9 @@ using NAudio.Wave;
 
 namespace MWG.EyesOfApollo.Desktop.Services
 {
+    /// <summary>
+    /// Windows-specific audio capture implementation using NAudio.
+    /// </summary>
     public partial class AudioCaptureService
     {
         private readonly object _syncRoot = new();
@@ -13,6 +16,7 @@ namespace MWG.EyesOfApollo.Desktop.Services
         private WasapiLoopbackCapture? _loopbackCapture;
         private MMDeviceEnumerator? _deviceEnumerator;
 
+        /// <inheritdoc />
         public Task<IReadOnlyList<AudioDeviceInfo>> GetInputDevicesAsync()
         {
             var devices = new List<AudioDeviceInfo>();
@@ -25,6 +29,7 @@ namespace MWG.EyesOfApollo.Desktop.Services
             return Task.FromResult<IReadOnlyList<AudioDeviceInfo>>(devices);
         }
 
+        /// <inheritdoc />
         public Task<IReadOnlyList<AudioDeviceInfo>> GetOutputDevicesAsync()
         {
             _deviceEnumerator ??= new MMDeviceEnumerator();
@@ -36,6 +41,7 @@ namespace MWG.EyesOfApollo.Desktop.Services
             return Task.FromResult<IReadOnlyList<AudioDeviceInfo>>(devices);
         }
 
+        /// <inheritdoc />
         public async Task StartAsync(AudioDeviceInfo device, AudioSourceType sourceType)
         {
             await StopAsync();
@@ -74,10 +80,9 @@ namespace MWG.EyesOfApollo.Desktop.Services
 
                 IsRunning = true;
             }
-
-            return;
         }
 
+        /// <inheritdoc />
         public Task StopAsync()
         {
             lock (_syncRoot)

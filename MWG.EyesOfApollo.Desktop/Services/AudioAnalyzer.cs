@@ -3,8 +3,24 @@ using MWG.EyesOfApollo.Desktop.Models;
 
 namespace MWG.EyesOfApollo.Desktop.Services
 {
+    /// <summary>
+    /// Provides FFT-based spectrum analysis helpers.
+    /// </summary>
     public static class AudioAnalyzer
     {
+        /// <summary>
+        /// Computes a spectrum for the provided samples.
+        /// </summary>
+        /// <param name="samples">The audio samples to analyze.</param>
+        /// <param name="sampleRate">The sample rate of the audio.</param>
+        /// <param name="channels">The channel count of the buffer.</param>
+        /// <param name="binCount">The number of spectrum bins to return.</param>
+        /// <param name="scaleMode">The amplitude scaling mode.</param>
+        /// <param name="weightingMode">The frequency weighting mode.</param>
+        /// <param name="binMode">The bin spacing mode.</param>
+        /// <param name="dbMin">The minimum dB value for normalization.</param>
+        /// <param name="dbMax">The maximum dB value for normalization.</param>
+        /// <returns>The computed spectrum magnitudes.</returns>
         public static float[] ComputeSpectrum(float[] samples, int sampleRate, int channels, int binCount, AmplitudeScaleMode scaleMode, FrequencyWeightingMode weightingMode, FrequencyBinMode binMode, double dbMin, double dbMax)
         {
             if (samples.Length == 0 || binCount <= 0 || sampleRate <= 0)

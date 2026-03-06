@@ -2,11 +2,18 @@
 
 namespace MWG.EyesOfApollo.Desktop
 {
-    public partial class MainPage : ContentPage
+    /// <summary>
+    /// Main visualizer page.
+    /// </summary>
+    public partial class MainPage
     {
         private readonly MainViewModel _viewModel;
         private readonly IDispatcherTimer _renderTimer;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MainPage"/> class.
+        /// </summary>
+        /// <param name="viewModel">The main view model.</param>
         public MainPage(MainViewModel viewModel)
         {
             InitializeComponent();
@@ -31,6 +38,7 @@ namespace MWG.EyesOfApollo.Desktop
             };
         }
 
+        /// <inheritdoc />
         protected override async void OnAppearing()
         {
             base.OnAppearing();
@@ -38,6 +46,7 @@ namespace MWG.EyesOfApollo.Desktop
             StartRenderTimer();
         }
 
+        /// <inheritdoc />
         protected override void OnDisappearing()
         {
             base.OnDisappearing();

@@ -1,0 +1,10 @@
+{
+  "name": "Ember",
+  "background": "#120A0A",
+  "primary": "#FF6B3D",
+  "secondary": "#FFC857",
+  "mode": "Bars",
+  "barCount": 72,
+  "lineThickness": 2.0,
+  "barSpacing": 2.5
+}

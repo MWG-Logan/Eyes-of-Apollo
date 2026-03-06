@@ -1,8 +1,10 @@
-﻿using ObjCRuntime;
-using UIKit;
+﻿using UIKit;
 
-namespace MWG.EyesOfApollo.Desktop
+namespace MWG.EyesOfApollo.Desktop.Platforms.iOS
 {
+    /// <summary>
+    /// iOS application entry point.
+    /// </summary>
     public class Program
     {
         // This is the main entry point of the application.

@@ -1,11 +1,17 @@
-﻿using Microsoft.Extensions.Logging;
-using MWG.EyesOfApollo.Desktop.Services;
+﻿using MWG.EyesOfApollo.Desktop.Services;
 using MWG.EyesOfApollo.Desktop.ViewModels;
 
 namespace MWG.EyesOfApollo.Desktop
 {
+    /// <summary>
+    /// Configures the MAUI app and dependency injection.
+    /// </summary>
     public static class MauiProgram
     {
+        /// <summary>
+        /// Creates the configured <see cref="MauiApp"/> instance.
+        /// </summary>
+        /// <returns>The configured MAUI app.</returns>
         public static MauiApp CreateMauiApp()
         {
             var builder = MauiApp.CreateBuilder();

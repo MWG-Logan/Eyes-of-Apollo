@@ -17,3 +17,5 @@
 - Ensure low latency (10–25ms).
 - Include an optional latency/stats overlay.
 - Remember the last selected device/theme.
+- Align visualization with human auditory perception using perceptual/psychophysical strategies, such as logarithmic bin scaling that matches how people hear.
+- Prefer adding future-oriented tuning ideas to `docs/roadmap.md` for planning future iterations.
