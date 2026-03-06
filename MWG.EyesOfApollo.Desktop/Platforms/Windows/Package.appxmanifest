@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
@@ -6,13 +6,13 @@
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   IgnorableNamespaces="uap rescap">
 
-  <Identity Name="maui-package-name-placeholder" Publisher="CN=Logan" Version="0.0.0.0" />
+  <Identity Name="maui-package-name-placeholder" Publisher="CN=Morningwood Gaming LLC, O=Morningwood Gaming LLC, L=Farmington Hills, S=Michigan, C=US" Version="0.0.0.0" />
 
   <mp:PhoneIdentity PhoneProductId="4CCD425B-BBB1-4458-A1E4-5F5AE97ACD41" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
     <DisplayName>$placeholder$</DisplayName>
-    <PublisherDisplayName>User Name</PublisherDisplayName>
+    <PublisherDisplayName>Morningwood Gaming LLC</PublisherDisplayName>
     <Logo>$placeholder$.png</Logo>
   </Properties>
 
