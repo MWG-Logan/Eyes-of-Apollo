@@ -5,16 +5,16 @@ namespace MWG.EyesOfApollo.Desktop.Services
 {
     public static class AudioAnalyzer
     {
-        public static float[] ComputeSpectrum(float[] samples, int sampleRate, int channels, int binCount, AmplitudeScaleMode scaleMode, FrequencyWeightingMode weightingMode)
+        public static float[] ComputeSpectrum(float[] samples, int sampleRate, int channels, int binCount, AmplitudeScaleMode scaleMode, FrequencyWeightingMode weightingMode, FrequencyBinMode binMode, double dbMin, double dbMax)
         {
-            if (samples.Length == 0 || binCount <= 0)
+            if (samples.Length == 0 || binCount <= 0 || sampleRate <= 0)
             {
                 return Array.Empty<float>();
             }
 
             var monoSamples = channels > 1 ? DownmixToMono(samples, channels) : samples;
 
-            var fftSize = NextPowerOfTwo(Math.Min(monoSamples.Length, 2048));
+            var fftSize = NextPowerOfTwo(Math.Min(monoSamples.Length, 4096));
             var buffer = new Complex[fftSize];
             for (var i = 0; i < fftSize; i++)
             {
@@ -31,37 +31,55 @@ namespace MWG.EyesOfApollo.Desktop.Services
             var maxFrequency = Math.Min(20000d, sampleRate / 2d);
             var logMin = Math.Log10(minFrequency);
             var logMax = Math.Log10(maxFrequency);
+            var linearStride = maxIndex / (double)binCount;
 
+            var reference = fftSize / 2d;
             for (var bin = 0; bin < binCount; bin++)
             {
-                var startLog = logMin + (logMax - logMin) * (bin / (double)binCount);
-                var endLog = logMin + (logMax - logMin) * ((bin + 1) / (double)binCount);
-                var startFreq = Math.Pow(10, startLog);
-                var endFreq = Math.Pow(10, endLog);
+                double startFreq;
+                double endFreq;
+
+                if (binMode == FrequencyBinMode.Logarithmic)
+                {
+                    var startLog = logMin + (logMax - logMin) * (bin / (double)binCount);
+                    var endLog = logMin + (logMax - logMin) * ((bin + 1) / (double)binCount);
+                    startFreq = Math.Pow(10, startLog);
+                    endFreq = Math.Pow(10, endLog);
+                }
+                else
+                {
+                    var startBin = bin * linearStride;
+                    var endBin = (bin + 1) * linearStride;
+                    startFreq = startBin * sampleRate / fftSize;
+                    endFreq = endBin * sampleRate / fftSize;
+                }
 
                 var startIndex = (int)Math.Clamp(Math.Floor(startFreq * fftSize / sampleRate), 1, maxIndex - 1);
                 var endIndex = (int)Math.Clamp(Math.Ceiling(endFreq * fftSize / sampleRate), startIndex + 1, maxIndex);
 
                 var sum = 0d;
-                var centerFrequency = Math.Sqrt(startFreq * endFreq);
+                var centerFrequency = Math.Max(1, Math.Sqrt(startFreq * endFreq));
                 var weight = weightingMode == FrequencyWeightingMode.AWeighting
                     ? DbToLinear(AWeightingDb(centerFrequency))
                     : 1d;
+
                 for (var i = startIndex; i < endIndex; i++)
                 {
-                    sum += buffer[i].Magnitude;
+                    var magnitude = buffer[i].Magnitude / reference;
+                    sum += magnitude * magnitude;
                 }
 
-                var average = (sum / Math.Max(1, endIndex - startIndex)) * weight;
+                var power = (sum / Math.Max(1, endIndex - startIndex)) * (weight * weight);
+                var rms = Math.Sqrt(power);
                 magnitudes[bin] = scaleMode == AmplitudeScaleMode.Dbfs
-                    ? ToDbfsNormalized(average)
-                    : (float)Math.Clamp(average * 4, 0, 1);
+                    ? ToDbfsNormalized(rms, dbMin, dbMax)
+                    : ToNormalized(rms);
             }
 
             return magnitudes;
         }
 
-        private static float ToDbfsNormalized(double magnitude)
+        private static float ToDbfsNormalized(double magnitude, double dbMin, double dbMax)
         {
             if (magnitude <= 0)
             {
@@ -69,9 +87,14 @@ namespace MWG.EyesOfApollo.Desktop.Services
             }
 
             var db = 20 * Math.Log10(magnitude);
-            const double minDb = -80;
-            var normalized = (db - minDb) / (0 - minDb);
+            var normalized = (db - dbMin) / (dbMax - dbMin);
             return (float)Math.Clamp(normalized, 0, 1);
+        }
+
+        private static float ToNormalized(double magnitude)
+        {
+            var compressed = Math.Log10(1 + (magnitude * 9));
+            return (float)Math.Clamp(compressed, 0, 1);
         }
 
         private static float[] DownmixToMono(float[] samples, int channels)

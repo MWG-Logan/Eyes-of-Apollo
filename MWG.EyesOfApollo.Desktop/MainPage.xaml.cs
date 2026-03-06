@@ -48,6 +48,7 @@ namespace MWG.EyesOfApollo.Desktop
         {
             var targetFps = Math.Max(30, _viewModel.SelectedFrameRate);
             _renderTimer.Interval = TimeSpan.FromMilliseconds(1000d / targetFps);
+            _renderTimer.Stop();
             _renderTimer.Start();
         }
     }

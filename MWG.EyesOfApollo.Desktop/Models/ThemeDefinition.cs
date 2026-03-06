@@ -9,7 +9,7 @@ namespace MWG.EyesOfApollo.Desktop.Models
         public string Primary { get; set; } = "#6C63FF";
         public string Secondary { get; set; } = "#F5A623";
         public VisualizerMode Mode { get; set; } = VisualizerMode.Bars;
-        public int BarCount { get; set; } = 64;
+        public int BarCount { get; set; } = 96;
         public float LineThickness { get; set; } = 2f;
         public float BarSpacing { get; set; } = 2f;
 

@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Microsoft.Maui.Graphics;
 using MWG.EyesOfApollo.Desktop.Models;
 using MWG.EyesOfApollo.Desktop.Rendering;
@@ -11,6 +12,8 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
 {
     public class MainViewModel : INotifyPropertyChanged, IDisposable
     {
+        private const double DefaultDbMin = -90;
+        private const double DefaultDbMax = -6;
         private const string ThemePreferenceKey = "SelectedTheme";
         private const string DevicePreferenceKey = "SelectedDevice";
         private const string SourcePreferenceKey = "SelectedSource";
@@ -23,6 +26,8 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
         private const string SmoothingPreferenceKey = "Smoothing";
         private const string PeakHoldPreferenceKey = "PeakHold";
         private const string WeightingPreferenceKey = "FrequencyWeighting";
+        private const string BandNormalizationPreferenceKey = "BandNormalization";
+        private const string BinModePreferenceKey = "FrequencyBinMode";
 
         private readonly IAudioCaptureService _audioCaptureService;
         private readonly ThemeService _themeService;
@@ -40,13 +45,16 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
         private bool _enableAutoGain;
         private bool _enableSmoothing;
         private bool _enablePeakHold;
+        private bool _enableBandNormalization;
         private FrequencyWeightingMode _selectedWeightingMode;
+        private FrequencyBinMode _selectedBinMode;
         private string _statsText = string.Empty;
         private int _frameCount;
         private double _latestLatency;
         private bool _isInitialized;
         private float[] _smoothedMagnitudes = Array.Empty<float>();
         private float[] _peakHoldMagnitudes = Array.Empty<float>();
+        private float[] _bandPeakMagnitudes = Array.Empty<float>();
         private float _autoGainPeak = 0.1f;
 
         public MainViewModel(IAudioCaptureService audioCaptureService, ThemeService themeService)
@@ -55,21 +63,26 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
             _themeService = themeService;
             _visualizerState = new VisualizerState();
             VisualizerDrawable = new VisualizerDrawable(_visualizerState);
+            VisualizerDrawable.DbMin = (float)DefaultDbMin;
+            VisualizerDrawable.DbMax = (float)DefaultDbMax;
 
             SourceOptions = new ObservableCollection<AudioSourceType>(Enum.GetValues<AudioSourceType>());
             ModeOptions = new ObservableCollection<VisualizerMode>(Enum.GetValues<VisualizerMode>());
             FrameRateOptions = new ObservableCollection<int>(new[] { 30, 60, 120, 144, 240 });
             ScaleOptions = new ObservableCollection<AmplitudeScaleMode>(Enum.GetValues<AmplitudeScaleMode>());
             WeightingOptions = new ObservableCollection<FrequencyWeightingMode>(Enum.GetValues<FrequencyWeightingMode>());
+            BinModeOptions = new ObservableCollection<FrequencyBinMode>(Enum.GetValues<FrequencyBinMode>());
 
             _selectedSourceType = AudioSourceType.Output;
             _selectedMode = VisualizerMode.Bars;
             _selectedFrameRate = 60;
-            _selectedScaleMode = AmplitudeScaleMode.Normalized;
-            _selectedWeightingMode = FrequencyWeightingMode.Flat;
+            _selectedScaleMode = AmplitudeScaleMode.Dbfs;
+            _selectedWeightingMode = FrequencyWeightingMode.AWeighting;
+            _selectedBinMode = FrequencyBinMode.Logarithmic;
             _enableAutoGain = true;
             _enableSmoothing = true;
             _enablePeakHold = true;
+            _enableBandNormalization = true;
 
             _audioCaptureService.AudioBufferAvailable += OnAudioBufferAvailable;
         }
@@ -83,6 +96,7 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
         public ObservableCollection<int> FrameRateOptions { get; }
         public ObservableCollection<AmplitudeScaleMode> ScaleOptions { get; }
         public ObservableCollection<FrequencyWeightingMode> WeightingOptions { get; }
+        public ObservableCollection<FrequencyBinMode> BinModeOptions { get; }
 
         public VisualizerDrawable VisualizerDrawable { get; }
 
@@ -95,6 +109,31 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
                 {
                     Preferences.Set(DevicePreferenceKey, value?.Id ?? string.Empty);
                     _ = RestartCaptureAsync();
+                }
+            }
+        }
+
+        public FrequencyBinMode SelectedBinMode
+        {
+            get => _selectedBinMode;
+            set
+            {
+                if (SetProperty(ref _selectedBinMode, value))
+                {
+                    Preferences.Set(BinModePreferenceKey, value.ToString());
+                    VisualizerDrawable.BinMode = value;
+                }
+            }
+        }
+
+        public bool EnableBandNormalization
+        {
+            get => _enableBandNormalization;
+            set
+            {
+                if (SetProperty(ref _enableBandNormalization, value))
+                {
+                    Preferences.Set(BandNormalizationPreferenceKey, value);
                 }
             }
         }
@@ -277,7 +316,8 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
 
                 if (ShowStats)
                 {
-                    StatsText = $"FPS {fps:0} | Latency {_latestLatency:0.0} ms | Mode {SelectedMode}";
+                    var latency = Volatile.Read(ref _latestLatency);
+                    StatsText = $"FPS {fps:0} | Latency {latency:0.0} ms | Mode {SelectedMode}";
                 }
             }
         }
@@ -310,6 +350,13 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
             foreach (var device in devices)
             {
                 Devices.Add(device);
+            }
+
+            if (Devices.Count == 0)
+            {
+                SelectedDevice = null;
+                await _audioCaptureService.StopAsync();
+                return;
             }
 
             var persistedDeviceId = Preferences.Get(DevicePreferenceKey, string.Empty);
@@ -356,7 +403,7 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
             ShowStats = Preferences.Get(StatsPreferenceKey, false);
             ShowAxisIndicators = Preferences.Get(AxisPreferenceKey, false);
 
-            if (Enum.TryParse(Preferences.Get(ScalePreferenceKey, AmplitudeScaleMode.Normalized.ToString()), out AmplitudeScaleMode scaleMode))
+            if (Enum.TryParse(Preferences.Get(ScalePreferenceKey, AmplitudeScaleMode.Dbfs.ToString()), out AmplitudeScaleMode scaleMode))
             {
                 SelectedScaleMode = scaleMode;
             }
@@ -364,10 +411,16 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
             EnableAutoGain = Preferences.Get(AutoGainPreferenceKey, true);
             EnableSmoothing = Preferences.Get(SmoothingPreferenceKey, true);
             EnablePeakHold = Preferences.Get(PeakHoldPreferenceKey, true);
+            EnableBandNormalization = Preferences.Get(BandNormalizationPreferenceKey, true);
 
-            if (Enum.TryParse(Preferences.Get(WeightingPreferenceKey, FrequencyWeightingMode.Flat.ToString()), out FrequencyWeightingMode weightingMode))
+            if (Enum.TryParse(Preferences.Get(WeightingPreferenceKey, FrequencyWeightingMode.AWeighting.ToString()), out FrequencyWeightingMode weightingMode))
             {
                 SelectedWeightingMode = weightingMode;
+            }
+
+            if (Enum.TryParse(Preferences.Get(BinModePreferenceKey, FrequencyBinMode.Logarithmic.ToString()), out FrequencyBinMode binMode))
+            {
+                SelectedBinMode = binMode;
             }
 
             var themeName = Preferences.Get(ThemePreferenceKey, string.Empty);
@@ -385,13 +438,22 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
                 return;
             }
 
-            var magnitudes = AudioAnalyzer.ComputeSpectrum(e.Samples, e.SampleRate, e.Channels, SelectedTheme.BarCount, SelectedScaleMode, SelectedWeightingMode);
+            var magnitudes = AudioAnalyzer.ComputeSpectrum(
+                e.Samples,
+                e.SampleRate,
+                e.Channels,
+                SelectedTheme.BarCount,
+                SelectedScaleMode,
+                SelectedWeightingMode,
+                SelectedBinMode,
+                DefaultDbMin,
+                DefaultDbMax);
             var processed = ApplyDynamics(magnitudes);
             var peaks = EnablePeakHold ? UpdatePeakHold(processed) : Array.Empty<float>();
-            _visualizerState.Update(processed, peaks);
+            _visualizerState.Update(processed, peaks, e.SampleRate);
 
             var latency = (Stopwatch.GetTimestamp() - e.TimestampTicks) * 1000.0 / Stopwatch.Frequency;
-            _latestLatency = latency;
+            Interlocked.Exchange(ref _latestLatency, latency);
         }
 
         private bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
@@ -415,7 +477,25 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
         {
             var result = magnitudes.ToArray();
 
-            if (EnableAutoGain)
+            if (EnableBandNormalization && SelectedScaleMode == AmplitudeScaleMode.Normalized)
+            {
+                if (_bandPeakMagnitudes.Length != result.Length)
+                {
+                    _bandPeakMagnitudes = new float[result.Length];
+                }
+
+                const float decay = 0.985f;
+                for (var i = 0; i < result.Length; i++)
+                {
+                    var value = result[i];
+                    var peak = Math.Max(value, _bandPeakMagnitudes[i] * decay);
+                    peak = Math.Max(peak, 0.0001f);
+                    _bandPeakMagnitudes[i] = peak;
+                    result[i] = Math.Clamp(value / peak, 0, 1);
+                }
+            }
+
+            if (EnableAutoGain && SelectedScaleMode == AmplitudeScaleMode.Normalized)
             {
                 var currentPeak = result.Length == 0 ? 0f : result.Max();
                 _autoGainPeak = Math.Max(currentPeak, _autoGainPeak * 0.98f);

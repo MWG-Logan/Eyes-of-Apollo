@@ -9,6 +9,7 @@ namespace MWG.EyesOfApollo.Desktop.Rendering
         private const float AxisBottomPadding = 28f;
         private const float AxisTopPadding = 12f;
         private const float AxisRightPadding = 12f;
+        private const float AmplitudeHeadroom = 0.9f;
 
         public VisualizerDrawable(VisualizerState state)
         {
@@ -20,6 +21,9 @@ namespace MWG.EyesOfApollo.Desktop.Rendering
         public bool ShowAxisIndicators { get; set; }
         public AmplitudeScaleMode ScaleMode { get; set; } = AmplitudeScaleMode.Normalized;
         public bool ShowPeakHold { get; set; }
+        public float DbMin { get; set; } = -90f;
+        public float DbMax { get; set; } = -6f;
+        public FrequencyBinMode BinMode { get; set; } = FrequencyBinMode.Logarithmic;
 
         public void Draw(ICanvas canvas, RectF dirtyRect)
         {
@@ -75,7 +79,7 @@ namespace MWG.EyesOfApollo.Desktop.Rendering
             for (var i = 0; i < count; i++)
             {
                 var value = Math.Clamp(magnitudes[i], 0, 1);
-                var barHeight = value * height;
+                var barHeight = value * height * AmplitudeHeadroom;
                 var x = rect.Left + i * (barWidth + spacing);
                 var y = rect.Bottom - barHeight;
                 canvas.FillRectangle(x, y, barWidth, barHeight);
@@ -94,7 +98,7 @@ namespace MWG.EyesOfApollo.Desktop.Rendering
             {
                 var value = Math.Clamp(magnitudes[i], 0, 1);
                 var x = rect.Left + i * step;
-                var y = rect.Bottom - (value * height);
+                var y = rect.Bottom - (value * height * AmplitudeHeadroom);
 
                 if (i == 0)
                 {
@@ -129,9 +133,27 @@ namespace MWG.EyesOfApollo.Desktop.Rendering
 
         private void DrawFrequencyLabels(ICanvas canvas, RectF plotArea)
         {
-            var frequencies = new[] { 60, 250, 1000, 4000, 16000 };
+            var sampleRate = _state.GetSampleRate();
+            var maxFrequency = Math.Min(20000d, sampleRate > 0 ? sampleRate / 2d : 20000d);
+
+            if (BinMode == FrequencyBinMode.Linear)
+            {
+                var step = maxFrequency / 4;
+                for (var i = 1; i <= 4; i++)
+                {
+                    var frequency = step * i;
+                    var position = frequency / maxFrequency;
+                    var x = plotArea.Left + (float)(position * plotArea.Width);
+                    var label = frequency >= 1000 ? $"{frequency / 1000:0.#}k" : frequency.ToString("0");
+                    canvas.DrawString($"{label} Hz", x, plotArea.Bottom + 6, HorizontalAlignment.Center);
+                }
+
+                return;
+            }
+
+            var frequencies = new[] { 60, 125, 250, 500, 1000, 2000, 4000, 8000, 16000 };
             var logMin = Math.Log10(20);
-            var logMax = Math.Log10(20000);
+            var logMax = Math.Log10(maxFrequency);
 
             foreach (var frequency in frequencies)
             {
@@ -146,12 +168,12 @@ namespace MWG.EyesOfApollo.Desktop.Rendering
         {
             if (ScaleMode == AmplitudeScaleMode.Dbfs)
             {
-                var labels = new[] { 0, -30, -60 };
+                var labels = new[] { DbMax, -20, -40, -60, DbMin };
                 foreach (var db in labels)
                 {
-                    var normalized = (db - (-80f)) / (0f - (-80f));
+                    var normalized = (db - DbMin) / (DbMax - DbMin);
                     var y = plotArea.Bottom - (normalized * plotArea.Height);
-                    canvas.DrawString($"{db} dB", leftPadding, y - 6, HorizontalAlignment.Left);
+                    canvas.DrawString($"{db:0} dB", leftPadding, y - 6, HorizontalAlignment.Left);
                 }
 
                 return;
@@ -184,7 +206,7 @@ namespace MWG.EyesOfApollo.Desktop.Rendering
             for (var i = 0; i < count; i++)
             {
                 var value = Math.Clamp(peaks[i], 0, 1);
-                var y = rect.Bottom - (value * height);
+                var y = rect.Bottom - (value * height * AmplitudeHeadroom);
                 var x = rect.Left + i * (barWidth + spacing);
                 canvas.DrawLine(x, y, x + barWidth, y);
             }
