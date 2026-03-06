@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using MWG.EyesOfApollo.Desktop.Models;
 
 namespace MWG.EyesOfApollo.Desktop.Services
@@ -11,7 +12,8 @@ namespace MWG.EyesOfApollo.Desktop.Services
         private readonly JsonSerializerOptions _serializerOptions = new()
         {
             PropertyNameCaseInsensitive = true,
-            WriteIndented = true
+            WriteIndented = true,
+            Converters = { new JsonStringEnumConverter() }
         };
 
         /// <summary>
