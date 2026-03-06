@@ -1,21 +1,24 @@
 using System.Numerics;
+using MWG.EyesOfApollo.Desktop.Models;
 
 namespace MWG.EyesOfApollo.Desktop.Services
 {
     public static class AudioAnalyzer
     {
-        public static float[] ComputeSpectrum(float[] samples, int binCount)
+        public static float[] ComputeSpectrum(float[] samples, int sampleRate, int channels, int binCount, AmplitudeScaleMode scaleMode, FrequencyWeightingMode weightingMode)
         {
             if (samples.Length == 0 || binCount <= 0)
             {
                 return Array.Empty<float>();
             }
 
-            var fftSize = NextPowerOfTwo(Math.Min(samples.Length, 2048));
+            var monoSamples = channels > 1 ? DownmixToMono(samples, channels) : samples;
+
+            var fftSize = NextPowerOfTwo(Math.Min(monoSamples.Length, 2048));
             var buffer = new Complex[fftSize];
             for (var i = 0; i < fftSize; i++)
             {
-                var sample = i < samples.Length ? samples[i] : 0f;
+                var sample = i < monoSamples.Length ? monoSamples[i] : 0f;
                 var window = 0.5f * (1f - MathF.Cos(2f * MathF.PI * i / (fftSize - 1)));
                 buffer[i] = new Complex(sample * window, 0);
             }
@@ -24,25 +27,71 @@ namespace MWG.EyesOfApollo.Desktop.Services
 
             var magnitudes = new float[binCount];
             var maxIndex = fftSize / 2;
-            var stride = Math.Max(1, maxIndex / binCount);
+            var minFrequency = 20d;
+            var maxFrequency = Math.Min(20000d, sampleRate / 2d);
+            var logMin = Math.Log10(minFrequency);
+            var logMax = Math.Log10(maxFrequency);
 
             for (var bin = 0; bin < binCount; bin++)
             {
-                var start = bin * stride;
-                var end = Math.Min(maxIndex, start + stride);
-                var sum = 0d;
+                var startLog = logMin + (logMax - logMin) * (bin / (double)binCount);
+                var endLog = logMin + (logMax - logMin) * ((bin + 1) / (double)binCount);
+                var startFreq = Math.Pow(10, startLog);
+                var endFreq = Math.Pow(10, endLog);
 
-                for (var i = start; i < end; i++)
+                var startIndex = (int)Math.Clamp(Math.Floor(startFreq * fftSize / sampleRate), 1, maxIndex - 1);
+                var endIndex = (int)Math.Clamp(Math.Ceiling(endFreq * fftSize / sampleRate), startIndex + 1, maxIndex);
+
+                var sum = 0d;
+                var centerFrequency = Math.Sqrt(startFreq * endFreq);
+                var weight = weightingMode == FrequencyWeightingMode.AWeighting
+                    ? DbToLinear(AWeightingDb(centerFrequency))
+                    : 1d;
+                for (var i = startIndex; i < endIndex; i++)
                 {
-                    var value = buffer[i].Magnitude;
-                    sum += value;
+                    sum += buffer[i].Magnitude;
                 }
 
-                var average = sum / Math.Max(1, end - start);
-                magnitudes[bin] = (float)Math.Clamp(average * 4, 0, 1);
+                var average = (sum / Math.Max(1, endIndex - startIndex)) * weight;
+                magnitudes[bin] = scaleMode == AmplitudeScaleMode.Dbfs
+                    ? ToDbfsNormalized(average)
+                    : (float)Math.Clamp(average * 4, 0, 1);
             }
 
             return magnitudes;
+        }
+
+        private static float ToDbfsNormalized(double magnitude)
+        {
+            if (magnitude <= 0)
+            {
+                return 0f;
+            }
+
+            var db = 20 * Math.Log10(magnitude);
+            const double minDb = -80;
+            var normalized = (db - minDb) / (0 - minDb);
+            return (float)Math.Clamp(normalized, 0, 1);
+        }
+
+        private static float[] DownmixToMono(float[] samples, int channels)
+        {
+            var sampleFrames = samples.Length / channels;
+            var mono = new float[sampleFrames];
+            var index = 0;
+
+            for (var frame = 0; frame < sampleFrames; frame++)
+            {
+                var sum = 0f;
+                for (var channel = 0; channel < channels; channel++)
+                {
+                    sum += samples[index++];
+                }
+
+                mono[frame] = sum / channels;
+            }
+
+            return mono;
         }
 
         private static int NextPowerOfTwo(int value)
@@ -100,6 +149,21 @@ namespace MWG.EyesOfApollo.Desktop.Services
             }
 
             return reversed;
+        }
+
+        private static double AWeightingDb(double frequency)
+        {
+            var f2 = frequency * frequency;
+            var ra = (Math.Pow(12200, 2) * Math.Pow(f2, 2)) /
+                     ((f2 + Math.Pow(20.6, 2)) * (f2 + Math.Pow(12200, 2)) *
+                      Math.Sqrt((f2 + Math.Pow(107.7, 2)) * (f2 + Math.Pow(737.9, 2))));
+
+            return 2.0 + 20 * Math.Log10(ra);
+        }
+
+        private static double DbToLinear(double db)
+        {
+            return Math.Pow(10, db / 20);
         }
     }
 }

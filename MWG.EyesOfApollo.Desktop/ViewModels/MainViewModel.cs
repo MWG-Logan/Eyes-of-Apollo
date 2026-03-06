@@ -17,6 +17,12 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
         private const string ModePreferenceKey = "SelectedMode";
         private const string FrameRatePreferenceKey = "SelectedFrameRate";
         private const string StatsPreferenceKey = "ShowStats";
+        private const string AxisPreferenceKey = "ShowAxisIndicators";
+        private const string ScalePreferenceKey = "AmplitudeScale";
+        private const string AutoGainPreferenceKey = "AutoGain";
+        private const string SmoothingPreferenceKey = "Smoothing";
+        private const string PeakHoldPreferenceKey = "PeakHold";
+        private const string WeightingPreferenceKey = "FrequencyWeighting";
 
         private readonly IAudioCaptureService _audioCaptureService;
         private readonly ThemeService _themeService;
@@ -29,10 +35,19 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
         private VisualizerMode _selectedMode;
         private int _selectedFrameRate;
         private bool _showStats;
+        private bool _showAxisIndicators;
+        private AmplitudeScaleMode _selectedScaleMode;
+        private bool _enableAutoGain;
+        private bool _enableSmoothing;
+        private bool _enablePeakHold;
+        private FrequencyWeightingMode _selectedWeightingMode;
         private string _statsText = string.Empty;
         private int _frameCount;
         private double _latestLatency;
         private bool _isInitialized;
+        private float[] _smoothedMagnitudes = Array.Empty<float>();
+        private float[] _peakHoldMagnitudes = Array.Empty<float>();
+        private float _autoGainPeak = 0.1f;
 
         public MainViewModel(IAudioCaptureService audioCaptureService, ThemeService themeService)
         {
@@ -44,10 +59,17 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
             SourceOptions = new ObservableCollection<AudioSourceType>(Enum.GetValues<AudioSourceType>());
             ModeOptions = new ObservableCollection<VisualizerMode>(Enum.GetValues<VisualizerMode>());
             FrameRateOptions = new ObservableCollection<int>(new[] { 30, 60, 120, 144, 240 });
+            ScaleOptions = new ObservableCollection<AmplitudeScaleMode>(Enum.GetValues<AmplitudeScaleMode>());
+            WeightingOptions = new ObservableCollection<FrequencyWeightingMode>(Enum.GetValues<FrequencyWeightingMode>());
 
             _selectedSourceType = AudioSourceType.Output;
             _selectedMode = VisualizerMode.Bars;
             _selectedFrameRate = 60;
+            _selectedScaleMode = AmplitudeScaleMode.Normalized;
+            _selectedWeightingMode = FrequencyWeightingMode.Flat;
+            _enableAutoGain = true;
+            _enableSmoothing = true;
+            _enablePeakHold = true;
 
             _audioCaptureService.AudioBufferAvailable += OnAudioBufferAvailable;
         }
@@ -59,6 +81,8 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
         public ObservableCollection<AudioSourceType> SourceOptions { get; }
         public ObservableCollection<VisualizerMode> ModeOptions { get; }
         public ObservableCollection<int> FrameRateOptions { get; }
+        public ObservableCollection<AmplitudeScaleMode> ScaleOptions { get; }
+        public ObservableCollection<FrequencyWeightingMode> WeightingOptions { get; }
 
         public VisualizerDrawable VisualizerDrawable { get; }
 
@@ -71,6 +95,18 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
                 {
                     Preferences.Set(DevicePreferenceKey, value?.Id ?? string.Empty);
                     _ = RestartCaptureAsync();
+                }
+            }
+        }
+
+        public FrequencyWeightingMode SelectedWeightingMode
+        {
+            get => _selectedWeightingMode;
+            set
+            {
+                if (SetProperty(ref _selectedWeightingMode, value))
+                {
+                    Preferences.Set(WeightingPreferenceKey, value.ToString());
                 }
             }
         }
@@ -138,6 +174,69 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
                     {
                         StatsText = string.Empty;
                     }
+                }
+            }
+        }
+
+        public bool ShowAxisIndicators
+        {
+            get => _showAxisIndicators;
+            set
+            {
+                if (SetProperty(ref _showAxisIndicators, value))
+                {
+                    Preferences.Set(AxisPreferenceKey, value);
+                    VisualizerDrawable.ShowAxisIndicators = value;
+                }
+            }
+        }
+
+        public AmplitudeScaleMode SelectedScaleMode
+        {
+            get => _selectedScaleMode;
+            set
+            {
+                if (SetProperty(ref _selectedScaleMode, value))
+                {
+                    Preferences.Set(ScalePreferenceKey, value.ToString());
+                    VisualizerDrawable.ScaleMode = value;
+                }
+            }
+        }
+
+        public bool EnableAutoGain
+        {
+            get => _enableAutoGain;
+            set
+            {
+                if (SetProperty(ref _enableAutoGain, value))
+                {
+                    Preferences.Set(AutoGainPreferenceKey, value);
+                }
+            }
+        }
+
+        public bool EnableSmoothing
+        {
+            get => _enableSmoothing;
+            set
+            {
+                if (SetProperty(ref _enableSmoothing, value))
+                {
+                    Preferences.Set(SmoothingPreferenceKey, value);
+                }
+            }
+        }
+
+        public bool EnablePeakHold
+        {
+            get => _enablePeakHold;
+            set
+            {
+                if (SetProperty(ref _enablePeakHold, value))
+                {
+                    Preferences.Set(PeakHoldPreferenceKey, value);
+                    VisualizerDrawable.ShowPeakHold = value;
                 }
             }
         }
@@ -255,6 +354,21 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
 
             SelectedFrameRate = Preferences.Get(FrameRatePreferenceKey, 60);
             ShowStats = Preferences.Get(StatsPreferenceKey, false);
+            ShowAxisIndicators = Preferences.Get(AxisPreferenceKey, false);
+
+            if (Enum.TryParse(Preferences.Get(ScalePreferenceKey, AmplitudeScaleMode.Normalized.ToString()), out AmplitudeScaleMode scaleMode))
+            {
+                SelectedScaleMode = scaleMode;
+            }
+
+            EnableAutoGain = Preferences.Get(AutoGainPreferenceKey, true);
+            EnableSmoothing = Preferences.Get(SmoothingPreferenceKey, true);
+            EnablePeakHold = Preferences.Get(PeakHoldPreferenceKey, true);
+
+            if (Enum.TryParse(Preferences.Get(WeightingPreferenceKey, FrequencyWeightingMode.Flat.ToString()), out FrequencyWeightingMode weightingMode))
+            {
+                SelectedWeightingMode = weightingMode;
+            }
 
             var themeName = Preferences.Get(ThemePreferenceKey, string.Empty);
             if (!string.IsNullOrWhiteSpace(themeName))
@@ -271,8 +385,10 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
                 return;
             }
 
-            var magnitudes = AudioAnalyzer.ComputeSpectrum(e.Samples, SelectedTheme.BarCount);
-            _visualizerState.Update(magnitudes);
+            var magnitudes = AudioAnalyzer.ComputeSpectrum(e.Samples, e.SampleRate, e.Channels, SelectedTheme.BarCount, SelectedScaleMode, SelectedWeightingMode);
+            var processed = ApplyDynamics(magnitudes);
+            var peaks = EnablePeakHold ? UpdatePeakHold(processed) : Array.Empty<float>();
+            _visualizerState.Update(processed, peaks);
 
             var latency = (Stopwatch.GetTimestamp() - e.TimestampTicks) * 1000.0 / Stopwatch.Frequency;
             _latestLatency = latency;
@@ -293,6 +409,64 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
         private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        private float[] ApplyDynamics(float[] magnitudes)
+        {
+            var result = magnitudes.ToArray();
+
+            if (EnableAutoGain)
+            {
+                var currentPeak = result.Length == 0 ? 0f : result.Max();
+                _autoGainPeak = Math.Max(currentPeak, _autoGainPeak * 0.98f);
+                var gain = _autoGainPeak > 0.0001f ? 1f / _autoGainPeak : 1f;
+
+                for (var i = 0; i < result.Length; i++)
+                {
+                    result[i] = Math.Clamp(result[i] * gain, 0, 1);
+                }
+            }
+
+            if (EnableSmoothing)
+            {
+                if (_smoothedMagnitudes.Length != result.Length)
+                {
+                    _smoothedMagnitudes = new float[result.Length];
+                }
+
+                const float attack = 0.6f;
+                const float release = 0.2f;
+
+                for (var i = 0; i < result.Length; i++)
+                {
+                    var previous = _smoothedMagnitudes[i];
+                    var target = result[i];
+                    var coefficient = target > previous ? attack : release;
+                    var smoothed = previous + (target - previous) * coefficient;
+                    _smoothedMagnitudes[i] = smoothed;
+                    result[i] = smoothed;
+                }
+            }
+
+            return result;
+        }
+
+        private float[] UpdatePeakHold(float[] magnitudes)
+        {
+            if (_peakHoldMagnitudes.Length != magnitudes.Length)
+            {
+                _peakHoldMagnitudes = new float[magnitudes.Length];
+            }
+
+            const float decay = 0.96f;
+            for (var i = 0; i < magnitudes.Length; i++)
+            {
+                var value = magnitudes[i];
+                var decayed = _peakHoldMagnitudes[i] * decay;
+                _peakHoldMagnitudes[i] = Math.Max(value, decayed);
+            }
+
+            return _peakHoldMagnitudes.ToArray();
         }
     }
 }

@@ -35,6 +35,31 @@
 
                 <Label Text="Frame Rate" FontAttributes="Bold" TextColor="{Binding ThemePrimary}" />
                 <Picker ItemsSource="{Binding FrameRateOptions}" SelectedItem="{Binding SelectedFrameRate}" />
+
+                <Label Text="Amplitude Scale" FontAttributes="Bold" TextColor="{Binding ThemePrimary}" />
+                <Picker ItemsSource="{Binding ScaleOptions}" SelectedItem="{Binding SelectedScaleMode}" />
+
+                <Label Text="Frequency Weighting" FontAttributes="Bold" TextColor="{Binding ThemePrimary}" />
+                <Picker ItemsSource="{Binding WeightingOptions}" SelectedItem="{Binding SelectedWeightingMode}" />
+
+                <Label Text="Dynamics" FontAttributes="Bold" TextColor="{Binding ThemePrimary}" />
+                <HorizontalStackLayout Spacing="12">
+                    <Label Text="Auto Gain" TextColor="{Binding ThemePrimary}" VerticalOptions="Center" />
+                    <Switch IsToggled="{Binding EnableAutoGain}" />
+                </HorizontalStackLayout>
+                <HorizontalStackLayout Spacing="12">
+                    <Label Text="Smoothing" TextColor="{Binding ThemePrimary}" VerticalOptions="Center" />
+                    <Switch IsToggled="{Binding EnableSmoothing}" />
+                </HorizontalStackLayout>
+                <HorizontalStackLayout Spacing="12">
+                    <Label Text="Peak Hold" TextColor="{Binding ThemePrimary}" VerticalOptions="Center" />
+                    <Switch IsToggled="{Binding EnablePeakHold}" />
+                </HorizontalStackLayout>
+
+                <HorizontalStackLayout Spacing="12">
+                    <Label Text="Axis Indicators" FontAttributes="Bold" TextColor="{Binding ThemePrimary}" VerticalOptions="Center" />
+                    <Switch IsToggled="{Binding ShowAxisIndicators}" />
+                </HorizontalStackLayout>
             </VerticalStackLayout>
         </ScrollView>
     </Grid>
