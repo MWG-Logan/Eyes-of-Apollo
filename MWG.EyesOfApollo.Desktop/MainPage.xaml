@@ -1,0 +1,42 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="MWG.EyesOfApollo.Desktop.MainPage">
+
+    <Grid RowDefinitions="Auto,*" ColumnDefinitions="*,320" BackgroundColor="{Binding ThemeBackground}">
+        <Grid Grid.Row="0" Grid.ColumnSpan="2" Padding="16" ColumnDefinitions="*,Auto">
+            <Label Text="Eyes of Apollo" FontSize="20" FontAttributes="Bold" TextColor="{Binding ThemePrimary}" />
+            <HorizontalStackLayout Grid.Column="1" Spacing="12" VerticalOptions="Center">
+                <Label Text="Stats" TextColor="{Binding ThemePrimary}" VerticalOptions="Center" />
+                <Switch IsToggled="{Binding ShowStats}" />
+            </HorizontalStackLayout>
+        </Grid>
+
+        <Grid Grid.Row="1" Grid.Column="0">
+            <GraphicsView x:Name="VisualizerView" />
+            <Border Padding="8" Margin="12" HorizontalOptions="End" VerticalOptions="Start" BackgroundColor="#66000000" StrokeShape="RoundRectangle 8" IsVisible="{Binding ShowStats}">
+                <Label Text="{Binding StatsText}" TextColor="White" FontSize="12" />
+            </Border>
+        </Grid>
+
+        <ScrollView Grid.Row="1" Grid.Column="1">
+            <VerticalStackLayout Padding="16" Spacing="14">
+                <Label Text="Source" FontAttributes="Bold" TextColor="{Binding ThemePrimary}" />
+                <Picker ItemsSource="{Binding SourceOptions}" SelectedItem="{Binding SelectedSourceType}" />
+
+                <Label Text="Device" FontAttributes="Bold" TextColor="{Binding ThemePrimary}" />
+                <Picker ItemsSource="{Binding Devices}" ItemDisplayBinding="{Binding DisplayName}" SelectedItem="{Binding SelectedDevice}" />
+
+                <Label Text="Theme" FontAttributes="Bold" TextColor="{Binding ThemePrimary}" />
+                <Picker ItemsSource="{Binding Themes}" ItemDisplayBinding="{Binding Name}" SelectedItem="{Binding SelectedTheme}" />
+
+                <Label Text="Mode" FontAttributes="Bold" TextColor="{Binding ThemePrimary}" />
+                <Picker ItemsSource="{Binding ModeOptions}" SelectedItem="{Binding SelectedMode}" />
+
+                <Label Text="Frame Rate" FontAttributes="Bold" TextColor="{Binding ThemePrimary}" />
+                <Picker ItemsSource="{Binding FrameRateOptions}" SelectedItem="{Binding SelectedFrameRate}" />
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+
+</ContentPage>
