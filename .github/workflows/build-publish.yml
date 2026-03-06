@@ -1,0 +1,178 @@
+name: Build and Publish MAUI
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  DOTNET_VERSION: 10.0.x
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Install MAUI workload
+        run: dotnet workload install maui
+      - name: Publish Windows portable
+        run: >-
+          dotnet publish MWG.EyesOfApollo.Desktop/MWG.EyesOfApollo.Desktop.csproj
+          -c Release
+          -f net10.0-windows10.0.19041.0
+          -p:RuntimeIdentifierOverride=win-x64
+          -p:WindowsPackageType=None
+          -p:WindowsAppSDKSelfContained=true
+      - name: Publish Windows MSIX
+        run: >-
+          dotnet publish MWG.EyesOfApollo.Desktop/MWG.EyesOfApollo.Desktop.csproj
+          -c Release
+          -f net10.0-windows10.0.19041.0
+          -p:RuntimeIdentifierOverride=win-x64
+          -p:WindowsPackageType=MSIX
+          -p:GenerateAppxPackageOnBuild=true
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Sign MSIX with Artifact Signing
+        uses: azure/artifact-signing-action@v1
+        with:
+          endpoint: ${{ secrets.ARTIFACT_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ secrets.ARTIFACT_SIGNING_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.ARTIFACT_SIGNING_CERT_PROFILE }}
+          files-folder: MWG.EyesOfApollo.Desktop/bin/Release/net10.0-windows10.0.19041.0/win-x64/AppPackages
+          files-folder-filter: msix
+          files-folder-recurse: true
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+      - name: Upload Windows portable
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-portable
+          path: MWG.EyesOfApollo.Desktop/bin/Release/net10.0-windows10.0.19041.0/win-x64/publish
+      - name: Upload Windows MSIX
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-msix
+          path: MWG.EyesOfApollo.Desktop/bin/Release/net10.0-windows10.0.19041.0/win-x64/AppPackages
+
+  android:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install MAUI workloads
+        run: dotnet workload install maui-android
+      - name: Decode keystore
+        shell: pwsh
+        run: |
+          $bytes = [Convert]::FromBase64String($env:ANDROID_KEYSTORE_BASE64)
+          [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\android.keystore", $bytes)
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      - name: Publish Android APK (portable)
+        run: >-
+          dotnet publish MWG.EyesOfApollo.Desktop/MWG.EyesOfApollo.Desktop.csproj
+          -c Release
+          -f net10.0-android
+          -p:AndroidPackageFormat=apk
+          -p:AndroidSigningKeyStore=$env:RUNNER_TEMP\android.keystore
+          -p:AndroidSigningKeyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          -p:AndroidSigningKeyPass=${{ secrets.ANDROID_KEY_PASSWORD }}
+          -p:AndroidSigningStorePass=${{ secrets.ANDROID_STORE_PASSWORD }}
+      - name: Publish Android AAB (installer)
+        run: >-
+          dotnet publish MWG.EyesOfApollo.Desktop/MWG.EyesOfApollo.Desktop.csproj
+          -c Release
+          -f net10.0-android
+          -p:AndroidPackageFormat=aab
+          -p:AndroidSigningKeyStore=$env:RUNNER_TEMP\android.keystore
+          -p:AndroidSigningKeyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          -p:AndroidSigningKeyPass=${{ secrets.ANDROID_KEY_PASSWORD }}
+          -p:AndroidSigningStorePass=${{ secrets.ANDROID_STORE_PASSWORD }}
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: MWG.EyesOfApollo.Desktop/bin/Release/net10.0-android/*-Signed.apk
+      - name: Upload Android AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-aab
+          path: MWG.EyesOfApollo.Desktop/bin/Release/net10.0-android/*-Signed.aab
+
+  apple:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Install MAUI workloads
+        run: dotnet workload install maui-ios maui-maccatalyst
+      - name: Install Apple signing assets
+        shell: bash
+        run: |
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          echo "$APPLE_CERT_P12" | base64 --decode > cert.p12
+          security import cert.p12 -k build.keychain -P "$APPLE_CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings build.keychain
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "$APPLE_PROVISION_PROFILE" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
+        env:
+          KEYCHAIN_PASSWORD: ${{ secrets.APPLE_KEYCHAIN_PASSWORD }}
+          APPLE_CERT_P12: ${{ secrets.APPLE_CERT_P12 }}
+          APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+          APPLE_PROVISION_PROFILE: ${{ secrets.APPLE_PROVISION_PROFILE }}
+      - name: Publish iOS IPA (installer)
+        run: >-
+          dotnet publish MWG.EyesOfApollo.Desktop/MWG.EyesOfApollo.Desktop.csproj
+          -c Release
+          -f net10.0-ios
+          -p:RuntimeIdentifier=ios-arm64
+          -p:BuildIpa=true
+          -p:CodesignKey="${{ secrets.APPLE_CODESIGN_KEY }}"
+      - name: Publish Mac Catalyst app/PKG
+        run: >-
+          dotnet publish MWG.EyesOfApollo.Desktop/MWG.EyesOfApollo.Desktop.csproj
+          -c Release
+          -f net10.0-maccatalyst
+          -p:"RuntimeIdentifiers=maccatalyst-x64;maccatalyst-arm64"
+          -p:CreatePackage=true
+          -p:CodesignKey="${{ secrets.APPLE_CODESIGN_KEY }}"
+      - name: Upload iOS IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa
+          path: MWG.EyesOfApollo.Desktop/bin/Release/net10.0-ios/**/*.ipa
+      - name: Upload Mac Catalyst app/PKG
+        uses: actions/upload-artifact@v4
+        with:
+          name: maccatalyst
+          path: |
+            MWG.EyesOfApollo.Desktop/bin/Release/net10.0-maccatalyst/**/*.app
+            MWG.EyesOfApollo.Desktop/bin/Release/net10.0-maccatalyst/**/*.pkg
