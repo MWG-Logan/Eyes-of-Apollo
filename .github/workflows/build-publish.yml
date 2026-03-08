@@ -3,6 +3,10 @@ name: Build and Publish MAUI
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'MWG.EyesOfApollo.Desktop/**'
+      - 'Themes/**'
+      - '.github/workflows/build-publish.yml'
   workflow_dispatch:
 
 permissions:
@@ -136,58 +140,98 @@ jobs:
           name: android-aab
           path: MWG.EyesOfApollo.Desktop/bin/Release/net10.0-android/*-Signed.aab
 
-  apple:
-    runs-on: macos-latest
+  # apple:
+  #  runs-on: macos-latest
+  #  steps:
+  #    - uses: actions/checkout@v4
+  #    - name: Setup .NET
+  #      uses: actions/setup-dotnet@v4
+  #      with:
+  #        dotnet-version: ${{ env.DOTNET_VERSION }}
+  #    - name: Install MAUI workloads
+  #      run: dotnet workload install maui
+  #    - name: Install Apple signing assets
+  #      shell: bash
+  #      run: |
+  #        security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+  #        security default-keychain -s build.keychain
+  #        security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+  #        echo "$APPLE_CERT_P12" | base64 --decode > cert.p12
+  #        security import cert.p12 -k build.keychain -P "$APPLE_CERT_PASSWORD" -T /usr/bin/codesign
+  #        security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+  #        security set-keychain-settings build.keychain
+  #        mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+  #        echo "$APPLE_PROVISION_PROFILE" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
+  #      env:
+  #        KEYCHAIN_PASSWORD: ${{ secrets.APPLE_KEYCHAIN_PASSWORD }}
+  #        APPLE_CERT_P12: ${{ secrets.APPLE_CERT_P12 }}
+  #        APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+  #        APPLE_PROVISION_PROFILE: ${{ secrets.APPLE_PROVISION_PROFILE }}
+  #    - name: Publish iOS IPA (installer)
+  #      run: >-
+  #        dotnet publish MWG.EyesOfApollo.Desktop/MWG.EyesOfApollo.Desktop.csproj
+  #        -c Release
+  #        -f net10.0-ios
+  #        -p:RuntimeIdentifier=ios-arm64
+  #        -p:BuildIpa=true
+  #        -p:CodesignKey="${{ secrets.APPLE_CODESIGN_KEY }}"
+  #    - name: Publish Mac Catalyst app/PKG
+  #      run: >-
+  #        dotnet publish MWG.EyesOfApollo.Desktop/MWG.EyesOfApollo.Desktop.csproj
+  #        -c Release
+  #        -f net10.0-maccatalyst
+  #        -p:"RuntimeIdentifiers=maccatalyst-x64;maccatalyst-arm64"
+  #        -p:CreatePackage=true
+  #        -p:CodesignKey="${{ secrets.APPLE_CODESIGN_KEY }}"
+  #    - name: Upload iOS IPA
+  #      uses: actions/upload-artifact@v4
+  #      with:
+  #        name: ios-ipa
+  #        path: MWG.EyesOfApollo.Desktop/bin/Release/net10.0-ios/**/*.ipa
+  #    - name: Upload Mac Catalyst app/PKG
+  #      uses: actions/upload-artifact@v4
+  #      with:
+  #        name: maccatalyst
+  #        path: |
+   #          MWG.EyesOfApollo.Desktop/bin/Release/net10.0-maccatalyst/**/*.app
+   #          MWG.EyesOfApollo.Desktop/bin/Release/net10.0-maccatalyst/**/*.pkg
+
+  release:
+    needs: [windows, android]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-      - name: Install MAUI workloads
-        run: dotnet workload install maui
-      - name: Install Apple signing assets
+
+      - name: Extract version from csproj
+        id: version
         shell: bash
         run: |
-          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
-          security default-keychain -s build.keychain
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
-          echo "$APPLE_CERT_P12" | base64 --decode > cert.p12
-          security import cert.p12 -k build.keychain -P "$APPLE_CERT_PASSWORD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
-          security set-keychain-settings build.keychain
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          echo "$APPLE_PROVISION_PROFILE" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
-        env:
-          KEYCHAIN_PASSWORD: ${{ secrets.APPLE_KEYCHAIN_PASSWORD }}
-          APPLE_CERT_P12: ${{ secrets.APPLE_CERT_P12 }}
-          APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
-          APPLE_PROVISION_PROFILE: ${{ secrets.APPLE_PROVISION_PROFILE }}
-      - name: Publish iOS IPA (installer)
-        run: >-
-          dotnet publish MWG.EyesOfApollo.Desktop/MWG.EyesOfApollo.Desktop.csproj
-          -c Release
-          -f net10.0-ios
-          -p:RuntimeIdentifier=ios-arm64
-          -p:BuildIpa=true
-          -p:CodesignKey="${{ secrets.APPLE_CODESIGN_KEY }}"
-      - name: Publish Mac Catalyst app/PKG
-        run: >-
-          dotnet publish MWG.EyesOfApollo.Desktop/MWG.EyesOfApollo.Desktop.csproj
-          -c Release
-          -f net10.0-maccatalyst
-          -p:"RuntimeIdentifiers=maccatalyst-x64;maccatalyst-arm64"
-          -p:CreatePackage=true
-          -p:CodesignKey="${{ secrets.APPLE_CODESIGN_KEY }}"
-      - name: Upload iOS IPA
-        uses: actions/upload-artifact@v4
+          display_ver=$(grep -oP '(?<=<ApplicationDisplayVersion>)[^<]+' MWG.EyesOfApollo.Desktop/MWG.EyesOfApollo.Desktop.csproj)
+          echo "tag=v${display_ver}" >> "$GITHUB_OUTPUT"
+
+      - name: Check if tag already exists
+        id: check_tag
+        shell: bash
+        run: |
+          if git ls-remote --tags origin "refs/tags/${{ steps.version.outputs.tag }}" | grep -q .; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download all artifacts
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: actions/download-artifact@v4
         with:
-          name: ios-ipa
-          path: MWG.EyesOfApollo.Desktop/bin/Release/net10.0-ios/**/*.ipa
-      - name: Upload Mac Catalyst app/PKG
-        uses: actions/upload-artifact@v4
+          path: artifacts
+
+      - name: Create GitHub release
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
         with:
-          name: maccatalyst
-          path: |
-            MWG.EyesOfApollo.Desktop/bin/Release/net10.0-maccatalyst/**/*.app
-            MWG.EyesOfApollo.Desktop/bin/Release/net10.0-maccatalyst/**/*.pkg
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Eyes of Apollo ${{ steps.version.outputs.tag }}
+          files: artifacts/**/*
+          generate_release_notes: true
