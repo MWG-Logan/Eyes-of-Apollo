@@ -4,25 +4,31 @@ xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:MWG.EyesOfApollo.Desktop.ViewModels"
              xmlns:models="clr-namespace:MWG.EyesOfApollo.Desktop.Models"
 x:Class="MWG.EyesOfApollo.Desktop.MainPage"
-x:DataType="vm:MainViewModel">
+x:DataType="vm:MainViewModel"
+Shell.NavBarIsVisible="False">
 
-    <Grid RowDefinitions="Auto,*" ColumnDefinitions="*,320" BackgroundColor="{Binding ThemeBackground}">
-        <Grid Grid.Row="0" Grid.ColumnSpan="2" Padding="16" ColumnDefinitions="*,Auto">
-            <Label Text="Eyes of Apollo" FontSize="20" FontAttributes="Bold" TextColor="{Binding ThemePrimary}" />
-            <HorizontalStackLayout Grid.Column="1" Spacing="12" VerticalOptions="Center">
-                <Label Text="Stats" TextColor="{Binding ThemePrimary}" VerticalOptions="Center" />
-                <Switch IsToggled="{Binding ShowStats}" />
+    <Grid RowDefinitions="*" ColumnDefinitions="*,Auto" BackgroundColor="{Binding ThemeBackground}">
+        <Grid Grid.Row="0" Grid.Column="0">
+            <GraphicsView x:Name="VisualizerView" />
+
+            <HorizontalStackLayout HorizontalOptions="End" VerticalOptions="Start" Margin="12,12,0,0" Spacing="8">
+                <Border Padding="8" BackgroundColor="#66000000" StrokeShape="RoundRectangle 8" IsVisible="{Binding ShowStats}" VerticalOptions="Center">
+                    <Label Text="{Binding StatsText}" TextColor="White" FontSize="12" />
+                </Border>
+
+                <Button Text="⚙"
+                        WidthRequest="36"
+                        HeightRequest="36"
+                        FontSize="16"
+                        CornerRadius="18"
+                        Padding="0"
+                        BackgroundColor="#66000000"
+                        TextColor="White"
+                        Command="{Binding ToggleSettingsPanelCommand}" />
             </HorizontalStackLayout>
         </Grid>
 
-        <Grid Grid.Row="1" Grid.Column="0">
-            <GraphicsView x:Name="VisualizerView" />
-            <Border Padding="8" Margin="12" HorizontalOptions="End" VerticalOptions="Start" BackgroundColor="#66000000" StrokeShape="RoundRectangle 8" IsVisible="{Binding ShowStats}">
-                <Label Text="{Binding StatsText}" TextColor="White" FontSize="12" />
-            </Border>
-        </Grid>
-
-        <ScrollView Grid.Row="1" Grid.Column="1">
+        <ScrollView Grid.Row="0" Grid.Column="1" WidthRequest="320" IsVisible="{Binding IsSettingsPanelVisible}">
             <VerticalStackLayout Padding="16" Spacing="14">
                 <Label Text="Source" FontAttributes="Bold" TextColor="{Binding ThemePrimary}" />
                 <Picker ItemsSource="{Binding SourceOptions}" SelectedItem="{Binding SelectedSourceType}" />
@@ -66,8 +72,13 @@ x:DataType="vm:MainViewModel">
                     <Switch IsToggled="{Binding EnablePeakHold}" />
                 </HorizontalStackLayout>
 
+                <Label Text="Overlay" FontAttributes="Bold" TextColor="{Binding ThemePrimary}" />
                 <HorizontalStackLayout Spacing="12">
-                    <Label Text="Axis Indicators" FontAttributes="Bold" TextColor="{Binding ThemePrimary}" VerticalOptions="Center" />
+                    <Label Text="Stats" TextColor="{Binding ThemePrimary}" VerticalOptions="Center" />
+                    <Switch IsToggled="{Binding ShowStats}" />
+                </HorizontalStackLayout>
+                <HorizontalStackLayout Spacing="12">
+                    <Label Text="Axis Indicators" TextColor="{Binding ThemePrimary}" VerticalOptions="Center" />
                     <Switch IsToggled="{Binding ShowAxisIndicators}" />
                 </HorizontalStackLayout>
             </VerticalStackLayout>
