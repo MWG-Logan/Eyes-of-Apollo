@@ -6,7 +6,6 @@ on:
     paths:
       - 'MWG.EyesOfApollo.Desktop/**'
       - 'Themes/**'
-      - '.github/workflows/build-publish.yml'
   workflow_dispatch:
     inputs:
       force_release:
