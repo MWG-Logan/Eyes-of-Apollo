@@ -1,4 +1,5 @@
-﻿using MWG.EyesOfApollo.Desktop.Services;
+﻿using Microsoft.Extensions.Logging;
+using MWG.EyesOfApollo.Desktop.Services;
 using MWG.EyesOfApollo.Desktop.ViewModels;
 
 namespace MWG.EyesOfApollo.Desktop
