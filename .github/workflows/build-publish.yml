@@ -8,6 +8,12 @@ on:
       - 'Themes/**'
       - '.github/workflows/build-publish.yml'
   workflow_dispatch:
+    inputs:
+      force_release:
+        description: 'Create/update release even if tag already exists'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   id-token: write
@@ -215,6 +221,13 @@ jobs:
         id: check_tag
         shell: bash
         run: |
+          force_release="${{ github.event_name == 'workflow_dispatch' && inputs.force_release || false }}"
+
+          if [ "$force_release" = "true" ]; then
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           if git ls-remote --tags origin "refs/tags/${{ steps.version.outputs.tag }}" | grep -q .; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
@@ -233,5 +246,12 @@ jobs:
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name: Eyes of Apollo ${{ steps.version.outputs.tag }}
-          files: artifacts/**/*
+          overwrite_files: true
+          files: |
+            artifacts/windows-portable/**/*.exe
+            artifacts/windows-msix/**/*.msix
+            artifacts/windows-msix/**/*.msixbundle
+            artifacts/windows-msix/**/*.msixupload
+            artifacts/android-apk/**/*.apk
+            artifacts/android-aab/**/*.aab
           generate_release_notes: true
