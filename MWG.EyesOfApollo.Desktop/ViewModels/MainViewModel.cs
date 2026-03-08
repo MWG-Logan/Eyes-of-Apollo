@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Windows.Input;
 using MWG.EyesOfApollo.Desktop.Models;
 using MWG.EyesOfApollo.Desktop.Rendering;
 using MWG.EyesOfApollo.Desktop.Services;
@@ -29,6 +30,7 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
         private const string WeightingPreferenceKey = "FrequencyWeighting";
         private const string BandNormalizationPreferenceKey = "BandNormalization";
         private const string BinModePreferenceKey = "FrequencyBinMode";
+        private const string SettingsPanelVisiblePreferenceKey = "SettingsPanelVisible";
 
         private readonly IAudioCaptureService _audioCaptureService;
         private readonly ThemeService _themeService;
@@ -57,6 +59,7 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
         private float[] _peakHoldMagnitudes = Array.Empty<float>();
         private float[] _bandPeakMagnitudes = Array.Empty<float>();
         private float _autoGainPeak = 0.1f;
+        private bool _isSettingsPanelVisible = true;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MainViewModel"/> class.
@@ -89,6 +92,8 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
             _enableSmoothing = true;
             _enablePeakHold = true;
             _enableBandNormalization = true;
+
+            ToggleSettingsPanelCommand = new Command(() => IsSettingsPanelVisible = !IsSettingsPanelVisible);
 
             _audioCaptureService.AudioBufferAvailable += OnAudioBufferAvailable;
         }
@@ -130,6 +135,11 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
         public ObservableCollection<FrequencyBinMode> BinModeOptions { get; }
 
         /// <summary>
+        /// Gets the command that collapses or expands the settings panel.
+        /// </summary>
+        public ICommand ToggleSettingsPanelCommand { get; }
+
+        /// <summary>
         /// Gets the drawable used by the view.
         /// </summary>
         public VisualizerDrawable VisualizerDrawable { get; }
@@ -146,6 +156,21 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
                 {
                     Preferences.Set(DevicePreferenceKey, value?.Id ?? string.Empty);
                     _ = RestartCaptureAsync();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the settings panel is visible.
+        /// </summary>
+        public bool IsSettingsPanelVisible
+        {
+            get => _isSettingsPanelVisible;
+            set
+            {
+                if (SetProperty(ref _isSettingsPanelVisible, value))
+                {
+                    Preferences.Set(SettingsPanelVisiblePreferenceKey, value);
                 }
             }
         }
@@ -523,6 +548,8 @@ namespace MWG.EyesOfApollo.Desktop.ViewModels
             {
                 SelectedBinMode = binMode;
             }
+
+            IsSettingsPanelVisible = Preferences.Get(SettingsPanelVisiblePreferenceKey, true);
 
             var themeName = Preferences.Get(ThemePreferenceKey, string.Empty);
             if (!string.IsNullOrWhiteSpace(themeName))
