@@ -22,11 +22,11 @@
 		<ApplicationTitle>Eyes of Apollo</ApplicationTitle>
 
 		<!-- App Identifier -->
-		<ApplicationId>com.companyname.mwg.eyesofapollo.desktop</ApplicationId>
+		<ApplicationId>com.mw-gc.eyesofapollo.desktop</ApplicationId>
 
 		<!-- Versions -->
 		<ApplicationDisplayVersion>1.0.2</ApplicationDisplayVersion>
-		<ApplicationVersion>1.0.2</ApplicationVersion>
+		<ApplicationVersion>102</ApplicationVersion>
 
 		<!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
 		<WindowsPackageType>MSIX</WindowsPackageType>
