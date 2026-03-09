@@ -18,6 +18,8 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
+      - name: Install MAUI Workloads
+        run: dotnet workload install maui-android maui-windows
       - name: Restore
         run: dotnet restore MWG.EyesOfApollo.Tests/MWG.EyesOfApollo.Tests.csproj
       - name: Test
