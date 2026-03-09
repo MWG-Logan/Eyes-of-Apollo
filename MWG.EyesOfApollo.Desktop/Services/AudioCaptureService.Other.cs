@@ -1,4 +1,4 @@
-#if !WINDOWS
+#if !WINDOWS && !ANDROID
 using MWG.EyesOfApollo.Desktop.Models;
 
 namespace MWG.EyesOfApollo.Desktop.Services
