@@ -11,6 +11,7 @@
 ## Project-Specific Rules
 - Eyes of Apollo (.NET MAUI, .NET 10) should be multi-platform (Windows/macOS, optionally mobile).
 - Visualize both audio input and output devices.
+- Support Android output audio capture using the platform-supported playback capture flow.
 - Use JSON themes stored in the app install/run directory.
 - Support bars/line with color customization.
 - Target monitor refresh rate with optional settings for 30/60/120/144/240 Hz.
