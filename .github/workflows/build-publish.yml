@@ -138,7 +138,7 @@ jobs:
           name: Eyes of Apollo ${{ steps.version.outputs.tag }}
           overwrite_files: true
           files: |
-            artifacts/windows-portable/**/*.exe
+            artifacts/windows-portable/**/MWG.EyesOfApollo.Desktop.exe
             artifacts/windows-msix/**/*.msix
             artifacts/windows-msix/**/*.msixbundle
             artifacts/windows-msix/**/*.msixupload
