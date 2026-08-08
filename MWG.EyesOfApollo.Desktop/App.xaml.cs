@@ -20,7 +20,11 @@
         /// <inheritdoc />
         protected override Window CreateWindow(IActivationState? activationState)
         {
-            return new Window(_appShell);
+            var window = new Window(_appShell)
+            {
+                Title = "Eyes of Apollo"
+            };
+            return window;
         }
     }
 }
